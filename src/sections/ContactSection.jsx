@@ -74,18 +74,11 @@ export default function ContactSection() {
     setStatus({ type: '', message: '' })
 
     try {
+      const data = new FormData(e.target)
+
       const response = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          access_key: WEB3FORMS_ACCESS_KEY,
-          name: formData.name,
-          email: formData.email,
-          project: formData.project,
-          message: formData.message,
-          subject: `New enquiry from ${formData.name} — ${formData.project}`,
-          from_name: 'Vyronex Digital Website',
-        }),
+        body: data,
       })
 
       const result = await response.json()
@@ -161,6 +154,9 @@ export default function ContactSection() {
           {/* Right Column: Form */}
           <div ref={formRef}>
             <form onSubmit={handleSubmit} className="p-6 sm:p-8 lg:p-10 rounded-2xl border border-white/[0.08] bg-surface-950/50 backdrop-blur-md shadow-2xl flex flex-col gap-5">
+              <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
+              <input type="hidden" name="subject" value="New enquiry from Vyronex Digital Website" />
+              <input type="hidden" name="from_name" value="Vyronex Digital Website" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="name" className="text-[0.75rem] font-medium text-white/50 px-1">Full Name</label>
