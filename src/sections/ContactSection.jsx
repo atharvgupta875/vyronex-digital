@@ -5,9 +5,10 @@
  *  - Glassmorphism form
  *  - GSAP ScrollTrigger reveals
  *  - Contact info (Email, Phone, WhatsApp)
+ *  - Web3Forms submission
  */
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { BRAND, SOCIALS } from '../utils'
@@ -15,10 +16,21 @@ import MagneticButton from '../components/MagneticButton'
 
 gsap.registerPlugin(ScrollTrigger)
 
+const WEB3FORMS_ACCESS_KEY = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY
+
 export default function ContactSection() {
   const sectionRef = useRef(null)
   const contentRef = useRef(null)
   const formRef = useRef(null)
+
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    project: '',
+    message: '',
+  })
+  const [status, setStatus] = useState({ type: '', message: '' })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -45,10 +57,50 @@ export default function ContactSection() {
     return () => ctx.revert()
   }, [])
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Placeholder for EmailJS integration
-    alert('Thank you for reaching out! We will get back to you shortly.')
+
+    // Client-side validation
+    if (!formData.name.trim() || !formData.email.trim() || !formData.project || !formData.message.trim()) {
+      setStatus({ type: 'error', message: 'Please fill in all required fields.' })
+      return
+    }
+
+    setIsSubmitting(true)
+    setStatus({ type: '', message: '' })
+
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_ACCESS_KEY,
+          name: formData.name,
+          email: formData.email,
+          project: formData.project,
+          message: formData.message,
+          subject: `New enquiry from ${formData.name} — ${formData.project}`,
+          from_name: 'Vyronex Digital Website',
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setStatus({ type: 'success', message: 'Thank you! Your message has been sent successfully.' })
+        setFormData({ name: '', email: '', project: '', message: '' })
+      } else {
+        setStatus({ type: 'error', message: result.message || 'Something went wrong. Please try again.' })
+      }
+    } catch {
+      setStatus({ type: 'error', message: 'Network error. Please check your connection and try again.' })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -112,18 +164,18 @@ export default function ContactSection() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="name" className="text-[0.75rem] font-medium text-white/50 px-1">Full Name</label>
-                  <input type="text" id="name" required className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-brand-500/50 focus:bg-white/[0.05] transition-all" placeholder="John Doe" />
+                  <input type="text" id="name" name="name" required value={formData.name} onChange={handleChange} className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-brand-500/50 focus:bg-white/[0.05] transition-all" placeholder="John Doe" />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="email" className="text-[0.75rem] font-medium text-white/50 px-1">Email Address</label>
-                  <input type="email" id="email" required className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-brand-500/50 focus:bg-white/[0.05] transition-all" placeholder="john@example.com" />
+                  <input type="email" id="email" name="email" required value={formData.email} onChange={handleChange} className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-brand-500/50 focus:bg-white/[0.05] transition-all" placeholder="john@example.com" />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="project" className="text-[0.75rem] font-medium text-white/50 px-1">Project Type</label>
-                <select id="project" required className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm text-white/70 focus:outline-none focus:border-brand-500/50 focus:bg-white/[0.05] transition-all appearance-none">
-                  <option value="" disabled selected className="bg-surface-900 text-white/50">Select a project type</option>
+                <select id="project" name="project" required value={formData.project} onChange={handleChange} className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm text-white/70 focus:outline-none focus:border-brand-500/50 focus:bg-white/[0.05] transition-all appearance-none">
+                  <option value="" disabled className="bg-surface-900 text-white/50">Select a project type</option>
                   <option value="Website Development" className="bg-surface-900 text-white">Website Development</option>
                   <option value="3D Interactive Website" className="bg-surface-900 text-white">3D Interactive Website</option>
                   <option value="AI Automation" className="bg-surface-900 text-white">AI Automation</option>
@@ -135,19 +187,33 @@ export default function ContactSection() {
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="message" className="text-[0.75rem] font-medium text-white/50 px-1">Message</label>
-                <textarea id="message" required rows={4} className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-brand-500/50 focus:bg-white/[0.05] transition-all resize-none" placeholder="Tell us about your goals..."></textarea>
+                <textarea id="message" name="message" required rows={4} value={formData.message} onChange={handleChange} className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-brand-500/50 focus:bg-white/[0.05] transition-all resize-none" placeholder="Tell us about your goals..."></textarea>
               </div>
+
+              {/* Status Message */}
+              {status.message && (
+                <div className={`px-4 py-3 rounded-xl text-sm font-medium ${
+                  status.type === 'success'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                }`}>
+                  {status.message}
+                </div>
+              )}
 
               <MagneticButton
                 as="button"
                 type="submit"
                 strength={0.15}
-                className="mt-2 w-full flex items-center justify-center gap-2 px-6 py-4 text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-500 text-white hover:shadow-xl hover:shadow-brand-600/25 active:scale-[0.98] transition-all touch-target"
+                disabled={isSubmitting}
+                className="mt-2 w-full flex items-center justify-center gap-2 px-6 py-4 text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-500 text-white hover:shadow-xl hover:shadow-brand-600/25 active:scale-[0.98] transition-all touch-target disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Send Message
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
-                </svg>
+                {isSubmitting ? 'Sending...' : 'Send Message'}
+                {!isSubmitting && (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
+                  </svg>
+                )}
               </MagneticButton>
             </form>
           </div>
@@ -157,3 +223,4 @@ export default function ContactSection() {
     </section>
   )
 }
+
