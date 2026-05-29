@@ -74,11 +74,23 @@ export default function ContactSection() {
     setStatus({ type: '', message: '' })
 
     try {
-      const data = new FormData(e.target)
+      const json = {
+        access_key: WEB3FORMS_ACCESS_KEY || '417b0a1f-3f97-444e-9581-45d79a8f3be2',
+        name: formData.name,
+        email: formData.email,
+        project: formData.project,
+        message: formData.message,
+        subject: `New enquiry from ${formData.name} — ${formData.project}`,
+        from_name: 'Vyronex Digital Website',
+      }
 
       const response = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
-        body: data,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(json),
       })
 
       const result = await response.json()
